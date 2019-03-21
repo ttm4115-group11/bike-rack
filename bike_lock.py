@@ -21,14 +21,15 @@ class BikeLock:
             'source': 'available',
             'target': 'reserved',
             'trigger': 'reserve',
-            'effect': 'start_timer()'
+            'effect': 'store_nfc(nfc_tag)',
+            'effect': 'start_timer(t, reservation_time)'
         }
 
         t2 = {
             'source': 'available',
             'target': 'locked',
-            'trigger': 'lock',
-            'effect': 'lock()'
+            'trigger': 'nfc_detect',
+            'effect': 'store_nfc(nfc_tag)'
         }
 
         t3 = {
@@ -41,8 +42,8 @@ class BikeLock:
         t4 = {
             'source': 'reserved',
             'target': 'locked',
-            'trigger': 'lock',
-            'effect': 'lock()',
+            'trigger': 'nfc_detect'
+            #If correct nfc_detect, go to locked state. Else, go to reserved state.
         }
 
         t5 = {
@@ -55,43 +56,58 @@ class BikeLock:
             'source': 'reserved',
             'target': 'out_of_order',
             'trigger': 'fault',
+            'effect': 'broken(this, from_reserved)'
         }
 
         # From Locked
         t7 = {
             'source': 'locked', 
             'target': 'available',
-            'trigger': 'unlock',
-            'effect': 'unlock()'
+            'trigger': 'nfc_detected'
+            #If correct nfc_detect, go to available state. Else, go to locked state.
         }
 
         t8 = {
-            'source', 'locked',
-            'target', 'out_of_order', 
-            'trigger', 
+            'source': 'locked',
+            'target': 'out_of_order', 
+            'trigger': 'fault',
+            'trigger': 'broken(this, from_locked)'
         }
+
+        # From Out_of_order
+        t9 = {
+            'source': 'out_of_order',
+            'target': 'terminated',
+            'trigger': 'service'
+        }
+
+
 
         # States 
         initial = {'name': 'initial'}
         available = {
             'name': 'available',
             'entry': 'green_led',
+            'entry': 'unlock()',
+            'entry': 'available(this)'
         }
 
         reserved = {
             'name': 'reserved',
-            'entry': 'red_led',
-
+            'entry': 'yellow_led'
         }
 
         locked = {
             'name': 'locked',
             'entry': 'red_led',
+            'entry': 'lock()'
         }
 
         out_of_order = {
             'name': 'out_of_order',
-            'entry': 'red_led',
+            'entry': 'red_led'
         }
+
+        #terminated state
 
         
