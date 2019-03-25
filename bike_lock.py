@@ -1,113 +1,143 @@
-import stmpy
+from stmpy import Driver, Machine
 
 
 class BikeLock:
-    
-    def __init__(self, name, manager, nfc_value):
 
-        self.name = name
+    def __init__(self, driver):
+        self.nfc_tag
+        self.driver=driver
 
-        self.stm = stmpy.Machine(name=self.name, states=[], trasistions=[], obj=self)
+    def store(self, nfc_tag):
+        self.nfc_tag=nfc_tag
 
-        # Define transistion 
-        
-        t0 = {
-            'source', 'initial',
-            'target', 'available'
-        }
+    def check_nfc_t4(self, nfc_tag):
+        if (self.nfc_tag == nfc_tag):
+            return 'locked'
+        else
+            return 'reserved'
 
-        # From Available
-        t1 = {
-            'source': 'available',
-            'target': 'reserved',
-            'trigger': 'reserve',
-            'effect': 'store_nfc(nfc_tag)',
-            'effect': 'start_timer(t, reservation_time)'
-        }
+    def check_nfc_t7(self, nfc_tag):
+        if (self.nfc_tag == nfc_tag):
+            return 'available'
+        else
+            return 'locked'
 
-        t2 = {
-            'source': 'available',
-            'target': 'locked',
-            'trigger': 'nfc_detect',
-            'effect': 'store_nfc(nfc_tag)'
-        }
+    def broken(self, from_state):
+        self.driver.send_broken_signal(self.nfc_tag,from_state)
 
-        t3 = {
-            'source': 'available',
-            'traget': 'out_of_order',
-            'trigger': 'fault'
-        }
+    def find_res_time(self):
+        return 20000 #TODO How to implement estimated arrival time?
 
-        # From Reserved
-        t4 = {
-            'source': 'reserved',
-            'target': 'locked',
-            'trigger': 'nfc_detect'
-            #If correct nfc_detect, go to locked state. Else, go to reserved state.
-        }
+    def led(self, led):
+        if led=="red":
+            return #TODO
 
-        t5 = {
-            'source': 'reserved',
-            'target': 'available',
-            'trigger': 't', 
-        }
+    def lock(self):
+        self.driver.send_lock_signal() #TODO
 
-        t6 = {
-            'source': 'reserved',
-            'target': 'out_of_order',
-            'trigger': 'fault',
-            'effect': 'broken(this, from_reserved)'
-        }
+    def unlock(self):
+        self.driver.send_unlock_signal() #TODO
 
-        # From Locked
-        t7 = {
-            'source': 'locked', 
-            'target': 'available',
-            'trigger': 'nfc_detected'
-            #If correct nfc_detect, go to available state. Else, go to locked state.
-        }
+    def available(self):
+        self.driver.send_available_signal() #TODO
 
-        t8 = {
-            'source': 'locked',
-            'target': 'out_of_order', 
-            'trigger': 'fault',
-            'trigger': 'broken(this, from_locked)'
-        }
+# STATES
 
-        # From Out_of_order
-        t9 = {
-            'source': 'out_of_order',
-            'target': 'terminated',
-            'trigger': 'service'
-        }
+initial = {'name': 'initial'}
 
+available = {
+    'name': 'available',
+    'entry': 'led("green"); unlock; available',
+}
 
+reserved = {
+    'name': 'reserved',
+    'entry': 'yellow_led',
+}
 
-        # States 
-        initial = {'name': 'initial'}
-        available = {
-            'name': 'available',
-            'entry': 'green_led',
-            'entry': 'unlock()',
-            'entry': 'available(this)'
-        }
+locked = {
+    'name': 'locked',
+    'entry': 'red_led; lock'
+}
 
-        reserved = {
-            'name': 'reserved',
-            'entry': 'yellow_led'
-        }
+out_of_order = {
+    'name': 'out_of_order',
+    'entry': 'red_led',
+}
 
-        locked = {
-            'name': 'locked',
-            'entry': 'red_led',
-            'entry': 'lock()'
-        }
+# TRANSITIONS
 
-        out_of_order = {
-            'name': 'out_of_order',
-            'entry': 'red_led'
-        }
+t0 = {
+    'source': 'initial',
+    'target': 'locked'
+}
 
-        #terminated state
+# From Available
+t1 = {
+    'source': 'available',
+    'target': 'reserved',
+    'trigger': 'reserve',
+    'effect': 'start_timer("t", res_time); store(nfc_tag)'  # TODO res_time
+}
 
-        
+t2 = {
+    'source': 'available',
+    'target': 'locked',
+    'trigger': 'nfc_det',
+    'effect': 'store(nfc_tag)'
+}
+
+t3 = {
+    'source': 'available',
+    'traget': 'out_of_order',
+    'trigger': 'fault',
+    'effect': 'broken("from_available")'
+}
+
+# From Reserved
+t4 = {
+    'source': 'reserved',
+    'trigger': 'nfc_det',
+    'function': 'stm.check_nfc(nfc_tag)'
+}
+
+t5 = {
+    'source': 'reserved',
+    'target': 'available',
+    'trigger': 't',
+}
+
+t6 = {
+    'source': 'reserved',
+    'target': 'out_of_order',
+    'trigger': 'fault',
+    'effect': 'broken(this, nfc_tag)'
+}
+
+# From Locked
+t7 = {
+    'source': 'locked',
+    'trigger': 'nfc_det',
+    'function': 'stm.check_nfc(nfc_tag)'
+}
+
+t8 = {
+    'source': 'locked',
+    'target': 'out_of_order',
+    'trigger': 'fault',
+    'effect': 'broken(this, from_locked)'
+}
+
+# From out of order
+t9 = {
+    'source': 'out_of_order',
+    # 'target': '?',
+    'effect': 'terminate'
+}
+
+rack = Driver()
+lock1=BikeLock(rack)
+stm_lock1 = Machine(name='lock1', states=[initial, reserved, locked, available, out_of_order], transitions=[t0,t1,t2,t3,t4,t5,t6,t7,t8,t9], obj=lock1)
+lock1.stm = stm_lock1
+rack.add_machine(stm_lock1)
+rack.start()
