@@ -1,4 +1,8 @@
 import json
+from bike_lock import BikeLock
+from stmpy import Driver
+import paho.mqtt.client as mqtt
+import logging
 
 """
     The component to manage locks in a bike rack.
@@ -9,95 +13,14 @@ import json
     * Subscribe to the topic in variable `MQTT_TOPIC_OUTPUT`. On this topic, the
     component sends its answers.
     * Send the messages listed below to the topic in variable `MQTT_TOPIC_INPUT`.
-    "commands" : "
-    """
+        {"command" : "check_available"}
+        {"command" : "reserve"}
+        {"command" : "add_lock", "lock_name" : "name"}
+"""
 
+class BikeRack:
 
-class BikeLockManager:
-
-    def __init__():
-        pass
-
-    def on_message_from_server(self, msg):
-        try:
-            payload = json.loads(msg)
-        except expression as identifier:
-
-
-pass
-
-
-class TimerManagerComponent:
-    """
-    The component to manage named timers in a voice assistant.
-    This component connects to an MQTT broker and listens to commands.
-    To interact with the component, do the following:
-    * Connect to the same broker as the component. You find the broker address
-    in the value of the variable `MQTT_BROKER`.
-    * Subscribe to the topic in variable `MQTT_TOPIC_OUTPUT`. On this topic, the
-    component sends its answers.
-    * Send the messages listed below to the topic in variable `MQTT_TOPIC_INPUT`.
-        {"command": "new_timer", "name": "spaghetti", "duration":50}
-        {"command": "status_all_timers"}
-        {"command": "status_single_timer", "name": "spaghetti"}
-    """
-
-    def on_connect(self, client, userdata, flags, rc):
-        # we just log that we are connected
-        self._logger.debug('MQTT connected to {}'.format(client))
-
-    def on_message(self, client, userdata, msg):
-        """
-        Processes incoming MQTT messages.
-        We assume the payload of all received MQTT messages is an UTF-8 encoded
-        string, which is formatted as a JSON object. The JSON object contains
-        a field called `command` which identifies what the message should achieve.
-        As a reaction to a received message, we can for example do the following:
-        * create a new state machine instance to handle the incoming messages,
-        * route the message to an existing state machine session,
-        * handle the message right here,
-        * throw the message away.
-        """
-        self._logger.debug('Incoming message to topic {}'.format(msg.topic))
-
-        # TODO unwrap JSON-encoded payload
-        try:
-            payload = json.loads(msg.payload.decode("UTF-8"))
-        except Exception as err:
-            self._logger.error(
-                f'Message sent to topic {msg.topic} had no valid JSON. Msg ignored. {err}'
-            )
-            return
-
-        command = payload.get('command')
-
-        if command == 'new_timer':
-            timer_name = payload.get('name')
-            duration = payload.get('duration')
-            timer_stm = TimerLogic(timer_name, duration, self)
-            self._logger.debug(f'start new state machine with name {timer_name}')
-            self.stm_driver.add_machine(timer_stm.stm)
-            self.stm_driver.start()
-
-        elif command == 'status_all_timers':
-            self._logger.debug(f'publish status for all timers')
-            for key in self.active_machines:
-                self.stm_driver.send('report', self.active_machines[key])
-
-
-        elif command == 'status_single_timer':
-            singe_timer_name = payload.get('name')
-            self._logger.debug(f'publish status for {singe_timer_name}')
-            self.stm_driver.send('report', payload.get('name'))
-
-        else:
-            self._logger.error(f'{command} is unknown command')
-
-        # TODO extract command
-
-        # TODO determine what to do
-
-    def __init__(self):
+    def __init__(self, name, ip_adress, port):
         """
         Start the component.
         ## Start of MQTT
@@ -123,22 +46,28 @@ class TimerManagerComponent:
         self.mqtt_client.on_connect = self.on_connect
         self.mqtt_client.on_message = self.on_message
         # Connect to the broker
-        self.mqtt_client.connect(MQTT_BROKER, MQTT_PORT)
+        self.mqtt_client.connect(self.MQTT_BROKER, self.MQTT_PORT)
         # subscribe to proper topic(s) of your choice
-        self.mqtt_client.subscribe(MQTT_TOPIC_INPUT)
+        self.mqtt_client.subscribe(self.MQTT_TOPIC_INPUT)
         # start the internal loop to process MQTT messages
         self.mqtt_client.loop_start()
 
         # we start the stmpy driver, without any state machines for now
-        self.stm_driver = stmpy.Driver()
-        self.stm_driver.start(keep_active=True)
+        self.driver = Driver()
+        self.driver.start(keep_active=True)
         self._logger.debug('Component initialization finished')
 
         # Active machines
         # key = value
-        self.active_machines = {
+        self.active_machines = {}
 
-        }
+        self.name=name
+
+        self.MQTT_TOPIC_INPUT = 'bike/', name, '/command'
+        self.MQTT_TOPIC_OUTPUT = 'bike/', name
+
+        self.MQTT_BROKER = ip_adress
+        self.MQTT_PORT = port
 
     def stop(self):
         """
@@ -150,6 +79,66 @@ class TimerManagerComponent:
         # stop the state machine Driver
         self.stm_driver.stop()
 
+    def on_connect(self, client, userdata, flags, rc):
+        # we just log that we are connected
+        self._logger.debug('MQTT connected to {}'.format(client))
+
+    def launch(self):
+        self.driver.start()
+
+    def check_available(self):
+        for key in self.active_machines:
+            if self.active_machines[key].state == available:
+                return True
+
+    def on_message(self, client, userdata, msg):
+        """
+        Processes incoming MQTT messages.
+        We assume the payload of all received MQTT messages is an UTF-8 encoded
+        string, which is formatted as a JSON object. The JSON object contains
+        a field called `command` which identifies what the message should achieve.
+        As a reaction to a received message, we can for example do the following:
+        * create a new state machine instance to handle the incoming messages,
+        * route the message to an existing state machine session,
+        * handle the message right here,
+        * throw the message away.
+        """
+        self._logger.debug('Incoming message to topic {}'.format(msg.topic))
+        try:
+            payload = json.loads(msg.payload.decode("UTF-8"))
+        except Exception as err:
+            self._logger.error(
+                f'Message sent to topic {msg.topic} had no valid JSON. Msg ignored. {err}'
+            )
+        command = payload.get('command')
+
+        if command == "check_available":
+            if self.check_available():
+                self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT,f'Lock available')
+
+        elif command=="reserve":
+            if self.check_available():
+                for key in self.active_machines:
+                    if self.active_machines==available: #TODO Available? State?
+                        self.stm_driver[key].send('reserve', self.active_machines[key])
+            else:
+                self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT,f'No locks available')
+
+        elif command=="add_lock":
+            lock_name=payload.get("lock_name")
+            lock=BikeLock(self.driver)
+            stm_lock = Machine(name=lock_name, states=[initial, reserved, locked, available, out_of_order], transitions=[t0,t1,t2,t3,t4,t5,t6,t7,t8,t9], obj=lock) #TODO Declare states and transitions in this class?
+            lock.stm = stm_lock
+            self.driver.add_machine(stm_lock)
+            self.active_machines[lock_name]=stm_lock
+
+
+
+    def res_expired(self, nfc_tag):
+        self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT,f'Reservetion timed out for {nfc_tag}')
+
+"""
+:::DEBUGGING:::
 
 # logging.DEBUG: Most fine-grained logging, printing everything
 # logging.INFO:  Only the most important informational log items
@@ -163,5 +152,3 @@ ch.setLevel(debug_level)
 formatter = logging.Formatter('%(asctime)s - %(name)-12s - %(levelname)-8s - %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
-
-t = TimerManagerComponent()

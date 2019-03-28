@@ -1,5 +1,4 @@
-from stmpy import Driver, Machine
-
+from stmpy import Machine
 
 class BikeLock:
 
@@ -26,10 +25,15 @@ class BikeLock:
         self.driver.send_broken_signal(self.nfc_tag,from_state)
 
     def find_res_time(self):
-        return 20000 #TODO How to implement estimated arrival time?
+        return position + 20000 #TODO How to implement estimated arrival time?
+        #return res_time
 
     def led(self, led):
         if led=="red":
+            return #TODO
+        if led == "green":
+            return #TODO
+        if led == "yellow":
             return #TODO
 
     def lock(self):
@@ -39,7 +43,7 @@ class BikeLock:
         self.driver.send_unlock_signal() #TODO
 
     def available(self):
-        self.driver.send_available_signal() #TODO
+        self.driver.res_expired(self.nfc_tag)
 
 # STATES
 
@@ -134,10 +138,3 @@ t9 = {
     # 'target': '?',
     'effect': 'terminate'
 }
-
-rack = Driver()
-lock1=BikeLock(rack)
-stm_lock1 = Machine(name='lock1', states=[initial, reserved, locked, available, out_of_order], transitions=[t0,t1,t2,t3,t4,t5,t6,t7,t8,t9], obj=lock1)
-lock1.stm = stm_lock1
-rack.add_machine(stm_lock1)
-rack.start()
