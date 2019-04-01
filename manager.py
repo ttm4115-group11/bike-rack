@@ -127,7 +127,7 @@ class BikeRack:
         elif command=="add_lock":
             lock_name=payload.get("lock_name")
             lock=BikeLock(self.driver)
-            stm_lock = Machine(name=lock_name, states=[initial, reserved, locked, available, out_of_order], transitions=[t0,t1,t2,t3,t4,t5,t6,t7,t8,t9], obj=lock) #TODO Declare states and transitions in this class?
+            stm_lock = Machine(name=lock_name, states=[initial, reserved, locked, available, out_of_order], transitions=[t0,t1,t2,t3,t4,t5,t6,t7,t8,t9], obj=lock)
             lock.stm = stm_lock
             self.driver.add_machine(stm_lock)
             self.active_machines[lock_name]=stm_lock
