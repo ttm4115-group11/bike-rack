@@ -152,3 +152,103 @@ ch.setLevel(debug_level)
 formatter = logging.Formatter('%(asctime)s - %(name)-12s - %(levelname)-8s - %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
+
+"""
+
+"""
+Declaring states and transitions
+"""
+
+# STATES
+
+initial = {'name': 'initial'}
+
+available = {
+    'name': 'available',
+    'entry': 'led("green"); unlock; available',
+}
+
+reserved = {
+    'name': 'reserved',
+    'entry': 'yellow_led',
+}
+
+locked = {
+    'name': 'locked',
+    'entry': 'red_led; lock'
+}
+
+out_of_order = {
+    'name': 'out_of_order',
+    'entry': 'red_led',
+}
+
+# TRANSITIONS
+
+t0 = {
+    'source': 'initial',
+    'target': 'locked'
+}
+
+# From Available
+t1 = {
+    'source': 'available',
+    'target': 'reserved',
+    'trigger': 'reserve',
+    'effect': 'start_timer("t", res_time); store(nfc_tag)'  # TODO res_time
+}
+
+t2 = {
+    'source': 'available',
+    'target': 'locked',
+    'trigger': 'nfc_det',
+    'effect': 'store(nfc_tag)'
+}
+
+t3 = {
+    'source': 'available',
+    'traget': 'out_of_order',
+    'trigger': 'fault',
+    'effect': 'broken("from_available")'
+}
+
+# From Reserved
+t4 = {
+    'source': 'reserved',
+    'trigger': 'nfc_det',
+    'function': 'stm.check_nfc(nfc_tag)'
+}
+
+t5 = {
+    'source': 'reserved',
+    'target': 'available',
+    'trigger': 't',
+}
+
+t6 = {
+    'source': 'reserved',
+    'target': 'out_of_order',
+    'trigger': 'fault',
+    'effect': 'broken(this, nfc_tag)'
+}
+
+# From Locked
+t7 = {
+    'source': 'locked',
+    'trigger': 'nfc_det',
+    'function': 'stm.check_nfc(nfc_tag)'
+}
+
+t8 = {
+    'source': 'locked',
+    'target': 'out_of_order',
+    'trigger': 'fault',
+    'effect': 'broken(this, from_locked)'
+}
+
+# From out of order
+t9 = {
+    'source': 'out_of_order',
+    # 'target': '?',
+    'effect': 'terminate'
+}
