@@ -1,6 +1,6 @@
 import json
 from bike_lock import BikeLock
-from stmpy import Driver
+from stmpy import Driver, Machine
 import paho.mqtt.client as mqtt
 import logging
 
@@ -18,9 +18,10 @@ import logging
         {"command" : "add_lock", "lock_name" : "name"}
 """
 
+
 class BikeRack:
 
-    def __init__(self, name, ip_adress, port):
+    def __init__(self, name, mqtt_broker, mqtt_port):
         """
         Start the component.
         ## Start of MQTT
@@ -34,57 +35,55 @@ class BikeRack:
         `self.driver`. You can use it to send signals into specific state
         machines, for instance.
         """
-        # get the logger object for the component
-        self._logger = logging.getLogger(__name__)
-        print('logging under name {}.'.format(__name__))
-        self._logger.info('Starting Component')
-
-        # create a new MQTT client
-        self._logger.debug('Connecting to MQTT broker {} at port {}'.format(MQTT_BROKER, MQTT_PORT))
-        self.mqtt_client = mqtt.Client()
-        # callback methods
-        self.mqtt_client.on_connect = self.on_connect
-        self.mqtt_client.on_message = self.on_message
-        # Connect to the broker
-        self.mqtt_client.connect(self.MQTT_BROKER, self.MQTT_PORT)
-        # subscribe to proper topic(s) of your choice
-        self.mqtt_client.subscribe(self.MQTT_TOPIC_INPUT)
-        # start the internal loop to process MQTT messages
-        self.mqtt_client.loop_start()
-
-        # we start the stmpy driver, without any state machines for now
-        self.driver = Driver()
-        self.driver.start(keep_active=True)
-        self._logger.debug('Component initialization finished')
-
-        # Active machines
-        # key = value
-        self.active_machines = {}
-
-        self.name=name
 
         self.MQTT_TOPIC_INPUT = 'bike/', name, '/command'
         self.MQTT_TOPIC_OUTPUT = 'bike/', name
 
-        self.MQTT_BROKER = ip_adress
-        self.MQTT_PORT = port
+        # Get the logger object for the component
+        self._logger = logging.getLogger(__name__)
+        print('Logging under name {}.'.format(__name__))
+        self._logger.info('Starting Component')
+
+        # Create a new MQTT client
+        self._logger.debug('Connecting to MQTT broker {} at port {}'.format(mqtt_broker, mqtt_port))
+        self.mqtt_client = mqtt.Client()
+
+        # Callback methods
+        self.mqtt_client.on_connect = self.on_connect
+        self.mqtt_client.on_message = self.on_message
+
+        # Connect to the broker
+        self.mqtt_client.connect(mqtt_broker, mqtt_port)
+
+        # Subscribe to proper topic(s) of your choice
+        self.mqtt_client.subscribe(self.MQTT_TOPIC_INPUT)
+
+        # Start the internal loop to process MQTT messages
+        self.mqtt_client.loop_start()
+
+        # We start the stmpy driver, without any state machines for now
+        self.driver = Driver()
+        self.driver.start(keep_active=True)
+
+        self._logger.debug('Component initialization finished')
+
+        # Active machines
+        self.active_machines = {}
+        self.name = name
 
     def stop(self):
         """
         Stop the component.
         """
-        # stop the MQTT client
+        # Stop the MQTT client
         self.mqtt_client.loop_stop()
 
-        # stop the state machine Driver
-        self.stm_driver.stop()
+        # Stop the state machine Driver
+        self.driver.stop()
 
     def on_connect(self, client, userdata, flags, rc):
-        # we just log that we are connected
+        # We just log that we are connected
         self._logger.debug('MQTT connected to {}'.format(client))
-
-    def launch(self):
-        self.driver.start()
 
     def check_available(self):
         for key in self.active_machines:
@@ -106,34 +105,41 @@ class BikeRack:
         self._logger.debug('Incoming message to topic {}'.format(msg.topic))
         try:
             payload = json.loads(msg.payload.decode("UTF-8"))
+            command = payload.get('command')
+
+            if command == "check_available":
+                if self.check_available():
+                    self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Lock available')
+
+            elif command == "reserve":
+                if self.check_available():
+                    for key in self.active_machines:
+                        if self.active_machines == available:  # TODO Available? State?
+                            self.active_machines[key].send('reserve', self.active_machines[key])
+                else:
+                    self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'No locks available')
+
+            elif command == "add_lock":
+                lock_name = payload.get("lock_name")
+                lock = BikeLock(self.driver)
+                stm_lock = Machine(
+                    name=lock_name,
+                    states=[initial, reserved, locked, available, out_of_order],
+                    transitions=[t0, t1, t2, t3, t4, t5, t6, t7, t8, t9],
+                    obj=lock
+                )
+                lock.stm = stm_lock
+                self.driver.add_machine(stm_lock)
+                self.active_machines[lock_name] = stm_lock
+
         except Exception as err:
             self._logger.error(
                 f'Message sent to topic {msg.topic} had no valid JSON. Msg ignored. {err}'
             )
-        command = payload.get('command')
-
-        if command == "check_available":
-            if self.check_available():
-                self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT,f'Lock available')
-
-        elif command=="reserve":
-            if self.check_available():
-                for key in self.active_machines:
-                    if self.active_machines==available: #TODO Available? State?
-                        self.stm_driver[key].send('reserve', self.active_machines[key])
-            else:
-                self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT,f'No locks available')
-
-        elif command=="add_lock":
-            lock_name=payload.get("lock_name")
-            lock=BikeLock(self.driver)
-            stm_lock = Machine(name=lock_name, states=[initial, reserved, locked, available, out_of_order], transitions=[t0,t1,t2,t3,t4,t5,t6,t7,t8,t9], obj=lock)
-            lock.stm = stm_lock
-            self.driver.add_machine(stm_lock)
-            self.active_machines[lock_name]=stm_lock
 
     def res_expired(self, nfc_tag):
-        self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT,f'Reservetion timed out for {nfc_tag}')
+        self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Reservetion timed out for {nfc_tag}')
+
 
 """
 Declaring states and transitions
