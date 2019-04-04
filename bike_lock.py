@@ -3,11 +3,12 @@ from stmpy import Machine
 
 class BikeLock:
 
-    def __init__(self, driver):
+    def __init__(self, driver, rack):
         self.nfc_tag = 0
         self.driver = driver
+        self.rack = rack
 
-    def store(self, nfc_tag):
+    def store(self, nfc_tag):  # TODO
         self.nfc_tag = nfc_tag
 
     def check_nfc_t4(self, nfc_tag):
@@ -23,12 +24,14 @@ class BikeLock:
             return 'locked'
 
     def broken(self, from_state):
+        # TODO How to track what state we came from?
+        # Backend should deal with an out of order signal differently if it is a bicycle already locked or not
         self.driver.send_broken_signal(self.nfc_tag, from_state)
 
     def find_res_time(self):
         return 20000  # TODO How to implement estimated arrival time? Add a variable
 
-    def led(self, led):
+    def led(self, led):  # TODO How to implement variables in effects? Or just have three methods: red_led(), green_led()...
         if led == "red":
             return  # TODO
         if led == "green":
@@ -37,10 +40,14 @@ class BikeLock:
             return  # TODO
 
     def lock(self):
-        self.driver.send_lock_signal()  # TODO
+        return  # TODO
 
     def unlock(self):
-        self.driver.send_unlock_signal()  # TODO
+        return  # TODO
 
     def available(self):
-        self.driver.res_expired(self.nfc_tag)
+        if self.nfc_tag not 0:
+            self.rack.res_expired(nfc_tag)
+        self.nfc_tag = 0
+
+# TODO Implement nfc_detected
