@@ -58,8 +58,8 @@ class BikeLock:
         return  # TODO
 
     def available(self):
-        if self.nfc_tag not 0:
-            self.rack.res_expired(nfc_tag)
+        if self.nfc_tag != 0:
+            self.rack.res_expired(self.nfc_tag)
         self.nfc_tag = 0
 
 # TODO Implement nfc_detected
