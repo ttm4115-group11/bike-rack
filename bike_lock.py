@@ -31,12 +31,24 @@ class BikeLock:
     def find_res_time(self):
         return 20000  # TODO How to implement estimated arrival time? Add a variable
 
-    def led(self, led):  # TODO How to implement variables in effects? Or just have three methods: red_led(), green_led()...
-        if led == "red":
+    def green_led(self):
+        self.led("green")
+        return
+
+    def red_led(self):
+        self.led("red")
+        return
+
+    def yellow_led(self):
+        self.led("yellow")
+        return
+
+    def led(self, color):  # TODO How to implement variables in effects? Or just have three methods: red_led(), green_led()...
+        if color == "red":
             return  # TODO
-        if led == "green":
+        if color == "green":
             return  # TODO
-        if led == "yellow":
+        if color == "yellow":
             return  # TODO
 
     def lock(self):
