@@ -110,7 +110,6 @@ class BikeRack:
         self.driver.start()
         # TEST END
 
-
     def stop(self):
         """
         Stop the component.
@@ -156,15 +155,13 @@ class BikeRack:
                 )
 
         elif command == "reserve":
-            self._logger.debug(self.active_machines)
             for name in self.active_machines:
-                self._logger.debug(self.driver._stms_by_id[name].state)
                 if self.driver._stms_by_id[name].state == "available":
                     self._logger.debug(f"Reserving lock with id: {name}")
                     self.driver.send(message_id='reserve', stm_id=name)
-                    self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Reserved lock')
+                    self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Reserved lock with name {name}')
                     return
-            self._logger.debug("No locks available")
+            self._logger.debug("No locks available in this rack")
             self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'No locks available')
 
         elif command == "add_lock":
