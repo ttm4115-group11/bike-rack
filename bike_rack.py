@@ -126,8 +126,7 @@ class BikeRack:
 
     def check_available(self):
         for name in self.active_machines:
-            # TODO Is this the right method? How does the state variable work? Returns what?
-            if self.driver.get_machine_by_name(name).state == "available":
+            if self.driver._stms_by_id[name].state == "available":
                 return True
 
     def on_message(self, client, userdata, msg):
@@ -148,7 +147,6 @@ class BikeRack:
         command = payload.get('command')
         self._logger.debug(f"Have detected this command: {command}")
 
-
         if command == "check_available":
             self._logger.debug("Inside if statement: Check_av")  # TODO Remove
             if self.check_available():
@@ -161,8 +159,7 @@ class BikeRack:
             self._logger.debug(self.active_machines)
             for name in self.active_machines:
                 self._logger.debug(self.driver._stms_by_id[name].state)
-                if self.driver._stms_by_id[name].state == "available":  # TODO Do as in the methon check_available()
-                    #self.active_machines[name].send('reserve', self.active_machines[name])
+                if self.driver._stms_by_id[name].state == "available":
                     self._logger.debug(f"Reserving lock with id: {name}")
                     self.driver.send(message_id='reserve', stm_id=name)
                     self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Reserved lock')
@@ -186,7 +183,6 @@ class BikeRack:
 
         #except Exception as err:
         #    self._logger.error(
-        #        # TODO Switch error message? Catch the right exception?
         #        f'Det skjedde en feil: {err}. Ignorerer melding'
         #        # f'Message sent to topic {msg.topic} had no valid JSON. Msg ignored. {err}'
         #    )
