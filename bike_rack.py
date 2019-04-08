@@ -96,15 +96,9 @@ class BikeRack:
 
         lock_name = "en"
         self._logger.debug(f'Create machine with name: {lock_name}')
-        lock = BikeLock(self.driver, self)
-        stm_lock = Machine(
-            name=lock_name,
-            states=[initial, reserved, locked, available, out_of_order],
-            transitions=[t0, t1, t2, t3, t4, t5, t6, t7, t8],
-            obj=lock
-        )
-        lock.stm = stm_lock
-        self.driver.add_machine(stm_lock)
+        lock_stm = BikeLock(self.driver, self)
+
+        self.driver.add_machine(lock_stm.stm)
         self.active_machines[lock_name] = lock_name
 
         self._logger.debug("Start driver")
@@ -155,12 +149,16 @@ class BikeRack:
                     f'Lock available'
                 )
 
+        # Assumes ``lock_name`` and ``nfc_tag``
         elif command == "reserve":
             for name in self.active_machines:
                 if self.driver._stms_by_id[name].state == "available":
                     self._logger.debug(f"Reserving lock with id: {name}")
-                    self.driver.send(message_id='reserve', stm_id=name)
+                    kwargs = {"nfc_tag": payload.get("value")}
+                    self.driver.send(message_id='reserve', stm_id=name, kwargs=kwargs)
                     self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Reserved lock with name {name}')
+                    self.mqtt_client.publish(self.get_stm_by_name(name)._obj.get_nfc_tag())
+                    self._logger.debug(self.get_stm_by_name(name)._obj.get_nfc_tag())
                     return
             self._logger.debug("No locks available in this rack")
             self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'No locks available')
@@ -183,6 +181,16 @@ class BikeRack:
         elif command == "nfc_det":
             self._logger.debug("running nfc_det")
             self.nfc_det(nfc_tag=payload.get("value"), lock_name=payload.get("lock_name"))
+
+        elif command == "check_state":
+            name = payload.get("name")
+            self._logger.debug(f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}")
+            self._logger.debug(f"Machine: {name}, is in state: {self.get_stm_by_name(name)._obj.get_both()}")
+
+            self.mqtt_client.publish(
+                self.MQTT_TOPIC_OUTPUT,
+                f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}, with values: {self.get_stm_by_name(name)._obj.get_both()}"
+            )
 
         # Catch message witout handler
         else:
@@ -217,7 +225,7 @@ class BikeRack:
 Declaring states and transitions
 """
 
-RESERVATION_TIMER = "1000"
+RESERVATION_TIMER = 5000000
 
 # STATES
 initial = {
@@ -250,7 +258,7 @@ t1 = {
     'source': 'available',
     'target': 'reserved',
     'trigger': 'reserve',
-    'effect': f'start_timer("t", {RESERVATION_TIMER});'  # TODO res_time
+    'effect': f'start_timer("t", {RESERVATION_TIMER});store(*)'  # TODO res_time
 }
 t2 = {
     'source': 'available',
