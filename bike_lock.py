@@ -4,10 +4,11 @@ from stmpy import Machine
 class BikeLock:
     RESERVATION_TIMER = 5000000
 
-    def __init__(self, driver, rack):
+    def __init__(self, driver, rack, name):
         self.nfc_tag = 0
         self.driver = driver
         self.rack = rack
+        self.name = name
 
         self.temp_tag = 0
         initial = {
@@ -85,7 +86,7 @@ class BikeLock:
             'effect': 'broken'
         }
         self.stm = Machine(
-            name="en",
+            name=self.name,
             states=[initial, reserved, locked, available, out_of_order],
             transitions=[t0, t1, t2, t3, t4, t5, t6, t7, t8],
             obj=self

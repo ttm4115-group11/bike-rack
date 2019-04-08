@@ -96,7 +96,7 @@ class BikeRack:
 
         lock_name = "en"
         self._logger.debug(f'Create machine with name: {lock_name}')
-        lock_stm = BikeLock(self.driver, self)
+        lock_stm = BikeLock(self.driver, self, lock_name)
 
         self.driver.add_machine(lock_stm.stm)
         self.active_machines[lock_name] = lock_name
@@ -165,16 +165,9 @@ class BikeRack:
 
         elif command == "add_lock":
             lock_name = payload.get("lock_name")
-            lock = BikeLock(self.driver, self)
             self._logger.debug(f"Add lock with name: {lock_name}")
-            stm_lock = Machine(
-                name=lock_name,
-                states=[initial, reserved, locked, available, out_of_order],
-                transitions=[t0, t1, t2, t3, t4, t5, t6, t7, t8],
-                obj=lock
-            )
-            lock.stm = stm_lock
-            self.driver.add_machine(stm_lock)
+            lock_stm = BikeLock(self.driver, self, lock_name)
+            self.driver.add_machine(lock_stm.stm)
             self.active_machines[lock_name] = lock_name
 
         # Assumes payload with``nfc_tag`` and ``lock_name``
