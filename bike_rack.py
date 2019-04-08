@@ -155,12 +155,16 @@ class BikeRack:
                     f'Lock available'
                 )
 
+        # Assumes ``lock_name`` and ``nfc_tag``
         elif command == "reserve":
             for name in self.active_machines:
                 if self.driver._stms_by_id[name].state == "available":
                     self._logger.debug(f"Reserving lock with id: {name}")
-                    self.driver.send(message_id='reserve', stm_id=name)
+                    kwargs = {"nfc_tag": payload.get("value")}
+                    self.driver.send(message_id='reserve', stm_id=name, kwargs=kwargs)
                     self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Reserved lock with name {name}')
+                    self.mqtt_client.publish(self.get_stm_by_name(name)._obj.get_nfc_tag())
+                    self._logger.debug(self.get_stm_by_name(name)._obj.get_nfc_tag())
                     return
             self._logger.debug("No locks available in this rack")
             self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'No locks available')
@@ -183,6 +187,14 @@ class BikeRack:
         elif command == "nfc_det":
             self._logger.debug("running nfc_det")
             self.nfc_det(nfc_tag=payload.get("value"), lock_name=payload.get("lock_name"))
+
+        elif command == "check_state":
+            name = payload.get("name")
+            self._logger.debug(f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}")
+            self.mqtt_client.publish(
+                self.MQTT_TOPIC_OUTPUT,
+                f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}"
+            )
 
         # Catch message witout handler
         else:
@@ -217,7 +229,7 @@ class BikeRack:
 Declaring states and transitions
 """
 
-RESERVATION_TIMER = "1000"
+RESERVATION_TIMER = 5000000
 
 # STATES
 initial = {

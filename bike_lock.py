@@ -8,8 +8,8 @@ class BikeLock:
         self.driver = driver
         self.rack = rack
 
-    def store(self, nfc_tag):  # TODO
-        self.nfc_tag = nfc_tag
+    def store(self, *args, **kwargs):  # TODO
+        self.nfc_tag = kwargs["nfc_tag"]
 
     def check_nfc_t4(self, *args, **kwargs):
         nfc_tag = kwargs["nfc_tag"]
@@ -75,3 +75,6 @@ class BikeLock:
 
     def test(self):
         return "Hello!"
+
+    def get_nfc_tag(self):
+        return self.nfc_tag
