@@ -141,13 +141,10 @@ class BikeRack:
         command = payload.get('command')
         self._logger.debug(f"Have detected this command: {command}")
 
-        if command == "check_available":
-            self._logger.debug("Inside if statement: Check_av")  # TODO Remove
+        if command == "check_driver":
+            self._logger.debug(f"State Machine: {self.driver.print_status()}")
             if self.check_available():
-                self.mqtt_client.publish(
-                    self.MQTT_TOPIC_OUTPUT,
-                    f'Lock available'
-                )
+                self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, self.driver.print_status())
 
         # Assumes ``lock_name`` and ``nfc_tag``
         elif command == "reserve":
