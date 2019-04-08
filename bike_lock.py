@@ -11,13 +11,15 @@ class BikeLock:
     def store(self, nfc_tag):  # TODO
         self.nfc_tag = nfc_tag
 
-    def check_nfc_t4(self, nfc_tag):
+    def check_nfc_t4(self, *args, **kwargs):
+        nfc_tag = kwargs["nfc_tag"]
         if self.nfc_tag == nfc_tag:
             return 'locked'
         else:
             return 'reserved'
 
-    def check_nfc_t7(self, nfc_tag):
+    def check_nfc_t7(self, *args, **kwargs):
+        nfc_tag = kwargs["nfc_tag"]
         if self.nfc_tag == nfc_tag:
             return 'available'
         else:
@@ -62,4 +64,14 @@ class BikeLock:
             self.rack.res_expired(self.nfc_tag)
         self.nfc_tag = 0
 
-# TODO Implement nfc_detected
+    # TODO Implement nfc_detected
+    def is_correct_nfc(self, nfc_tag):
+        # If a lock is not reserved and NFC should be valid
+        if self.nfc_tag == 0:
+            return True
+        elif nfc_tag == self.nfc_tag:
+            return True
+        return False
+
+    def test(self):
+        return "Hello!"

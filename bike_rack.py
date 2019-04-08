@@ -14,8 +14,9 @@ import logging
     component sends its answers.
     * Send the messages listed below to the topic in variable `MQTT_TOPIC_INPUT`.
         {"command" : "check_available"}
-        {"command" : "reserve"}
+        {"command" : "reserve", "value": ``nfc_value``, "offset": ``offset``}
         {"command" : "add_lock", "lock_name" : "name"}
+        {"command" : "nfc_det", "value": ``nfc_value``, "lock_name": ``name``}
 """
 
 
@@ -178,6 +179,15 @@ class BikeRack:
             self.driver.add_machine(stm_lock)
             self.active_machines[lock_name] = lock_name
 
+        # Assumes payload with``nfc_tag`` and ``lock_name``
+        elif command == "nfc_det":
+            self._logger.debug("running nfc_det")
+            self.nfc_det(nfc_tag=payload.get("value"), lock_name=payload.get("lock_name"))
+
+        # Catch message witout handler
+        else:
+            self._logger.debug(f"Command: {command} does not have a handler")
+
         #except Exception as err:
         #    self._logger.error(
         #        f'Det skjedde en feil: {err}. Ignorerer melding'
@@ -187,6 +197,21 @@ class BikeRack:
     def res_expired(self, nfc_tag):
         self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Reservetion timed out for {nfc_tag}')
 
+    def nfc_det(self, nfc_tag, lock_name):
+        self._logger.debug(f"Detected NFC-tag with value: {nfc_tag} presented to lock: {lock_name}")
+        self._logger.debug(self.get_stm_by_name(lock_name).state)
+        kwargs = {"nfc_tag": nfc_tag}
+        self.driver.send(message_id='nfc_det', stm_id=lock_name, kwargs=kwargs)
+
+    # Getter for stm_by name
+    def get_stm_by_name(self, stm_name):
+        if self.driver._stms_by_id[stm_name]:
+            self._logger.debug(f"Getting stm with name: {stm_name}")
+            return self.driver._stms_by_id[stm_name]
+
+        # Did not find machine with ``stm_name``
+        self._logger.error(f"Error: did not find stm with name: {stm_name}")
+        return None
 
 """
 Declaring states and transitions
@@ -243,7 +268,7 @@ t3 = {
 t4 = {
     'source': 'reserved',
     'trigger': 'nfc_det',
-    'function': 'check_nfc'
+    'function': 'stm.check_nfc_t4(*)'
 }
 t5 = {
     'source': 'reserved',
@@ -260,7 +285,7 @@ t6 = {
 t7 = {
     'source': 'locked',
     'trigger': 'nfc_det',  # TODO
-    'function': 'check_nfc'
+    'function': 'stm.check_nfc_t7(*)'
 }
 t8 = {
     'source': 'locked',
