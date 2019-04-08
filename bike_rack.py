@@ -14,8 +14,9 @@ import logging
     component sends its answers.
     * Send the messages listed below to the topic in variable `MQTT_TOPIC_INPUT`.
         {"command" : "check_available"}
-        {"command" : "reserve"}
+        {"command" : "reserve", "value": ``nfc_value``, "offset": ``offset``}
         {"command" : "add_lock", "lock_name" : "name"}
+        {"command" : "nfc_det", "value": ``nfc_value``, "lock_name": ``name``}
 """
 
 
@@ -92,7 +93,9 @@ class BikeRack:
         # TEST START!
         # TODO Remove this section.
         # This section is just to test with one lock.
+
         lock_name = "en"
+        self._logger.debug(f'Create machine with name: {lock_name}')
         lock = BikeLock(self.driver, self)
         stm_lock = Machine(
             name=lock_name,
@@ -103,6 +106,9 @@ class BikeRack:
         lock.stm = stm_lock
         self.driver.add_machine(stm_lock)
         self.active_machines[lock_name] = lock_name
+
+        self._logger.debug("Start driver")
+        self.driver.start()
         # TEST END
 
     def stop(self):
@@ -120,8 +126,7 @@ class BikeRack:
 
     def check_available(self):
         for name in self.active_machines:
-            # TODO Is this the right method? How does the state variable work? Returns what?
-            if self.driver.get_machine_by_name(name).state == "available"
+            if self.driver._stms_by_id[name].state == "available":
                 return True
 
     def on_message(self, client, userdata, msg):
@@ -137,54 +142,82 @@ class BikeRack:
         * throw the message away.
         """
         self._logger.debug('Incoming message to topic {}'.format(msg.topic))
-        try:
-            payload = json.loads(msg.payload)
-            command = payload.get('command')
-            self._logger.debug(f"Have detected this command: {command}")
 
-            if command == "check_available":
-                self._logger.debug("Inside if statement: Check_av")  # TODO Remove
-                if self.check_available():
-                    self.mqtt_client.publish(
-                        self.MQTT_TOPIC_OUTPUT,
-                        f'Lock available'
-                    )
+        payload = json.loads(msg.payload)
+        command = payload.get('command')
+        self._logger.debug(f"Have detected this command: {command}")
 
-            elif command == "reserve":
-                for name in self.active_machines:
-                    if self.driver.get_machine_by_name(name).state == "available":  # TODO Do as in the methon check_available()
-                        self.active_machines[name].send('reserve', self.active_machines[name])
-                        self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Reserved lock')
-                        return
-                self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'No locks available')
-
-            elif command == "add_lock":
-                lock_name = payload.get("lock_name")
-                lock = BikeLock(self.driver, self)
-                stm_lock = Machine(
-                    name=lock_name,
-                    states=[initial, reserved, locked, available, out_of_order],
-                    transitions=[t0, t1, t2, t3, t4, t5, t6, t7, t8],
-                    obj=lock
+        if command == "check_available":
+            self._logger.debug("Inside if statement: Check_av")  # TODO Remove
+            if self.check_available():
+                self.mqtt_client.publish(
+                    self.MQTT_TOPIC_OUTPUT,
+                    f'Lock available'
                 )
-                lock.stm = stm_lock
-                self.driver.add_machine(stm_lock)
-                self.active_machines[lock_name] = lock_name
 
-        except Exception as err:
-            self._logger.error(
-                # TODO Switch error message? Catch the right exception?
-                f'Det skjedde en feil: {err}. Ignorerer melding'
-                # f'Message sent to topic {msg.topic} had no valid JSON. Msg ignored. {err}'
+        elif command == "reserve":
+            for name in self.active_machines:
+                if self.driver._stms_by_id[name].state == "available":
+                    self._logger.debug(f"Reserving lock with id: {name}")
+                    self.driver.send(message_id='reserve', stm_id=name)
+                    self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Reserved lock with name {name}')
+                    return
+            self._logger.debug("No locks available in this rack")
+            self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'No locks available')
+
+        elif command == "add_lock":
+            lock_name = payload.get("lock_name")
+            lock = BikeLock(self.driver, self)
+            self._logger.debug(f"Add lock with name: {lock_name}")
+            stm_lock = Machine(
+                name=lock_name,
+                states=[initial, reserved, locked, available, out_of_order],
+                transitions=[t0, t1, t2, t3, t4, t5, t6, t7, t8],
+                obj=lock
             )
+            lock.stm = stm_lock
+            self.driver.add_machine(stm_lock)
+            self.active_machines[lock_name] = lock_name
+
+        # Assumes payload with``nfc_tag`` and ``lock_name``
+        elif command == "nfc_det":
+            self._logger.debug("running nfc_det")
+            self.nfc_det(nfc_tag=payload.get("value"), lock_name=payload.get("lock_name"))
+
+        # Catch message witout handler
+        else:
+            self._logger.debug(f"Command: {command} does not have a handler")
+
+        #except Exception as err:
+        #    self._logger.error(
+        #        f'Det skjedde en feil: {err}. Ignorerer melding'
+        #        # f'Message sent to topic {msg.topic} had no valid JSON. Msg ignored. {err}'
+        #    )
 
     def res_expired(self, nfc_tag):
         self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Reservetion timed out for {nfc_tag}')
 
+    def nfc_det(self, nfc_tag, lock_name):
+        self._logger.debug(f"Detected NFC-tag with value: {nfc_tag} presented to lock: {lock_name}")
+        self._logger.debug(self.get_stm_by_name(lock_name).state)
+        kwargs = {"nfc_tag": nfc_tag}
+        self.driver.send(message_id='nfc_det', stm_id=lock_name, kwargs=kwargs)
+
+    # Getter for stm_by name
+    def get_stm_by_name(self, stm_name):
+        if self.driver._stms_by_id[stm_name]:
+            self._logger.debug(f"Getting stm with name: {stm_name}")
+            return self.driver._stms_by_id[stm_name]
+
+        # Did not find machine with ``stm_name``
+        self._logger.error(f"Error: did not find stm with name: {stm_name}")
+        return None
 
 """
 Declaring states and transitions
 """
+
+RESERVATION_TIMER = "1000"
 
 # STATES
 initial = {
@@ -210,20 +243,20 @@ out_of_order = {
 # TRANSITIONS
 t0 = {
     'source': 'initial',
-    'target': 'aviliable'
+    'target': 'available'
 }
 # From Available
 t1 = {
     'source': 'available',
     'target': 'reserved',
     'trigger': 'reserve',
-    'effect': 'start_timer; store'  # TODO res_time
+    'effect': f'start_timer("t", {RESERVATION_TIMER});'  # TODO res_time
 }
 t2 = {
     'source': 'available',
     'target': 'locked',
     'trigger': 'nfc_det',  # TODO
-    'effect': 'store'
+
 }
 t3 = {
     'source': 'available',
@@ -235,7 +268,7 @@ t3 = {
 t4 = {
     'source': 'reserved',
     'trigger': 'nfc_det',
-    'function': 'check_nfc'
+    'function': 'stm.check_nfc_t4(*)'
 }
 t5 = {
     'source': 'reserved',
@@ -252,7 +285,7 @@ t6 = {
 t7 = {
     'source': 'locked',
     'trigger': 'nfc_det',  # TODO
-    'function': 'check_nfc'
+    'function': 'stm.check_nfc_t7(*)'
 }
 t8 = {
     'source': 'locked',
