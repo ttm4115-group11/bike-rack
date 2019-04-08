@@ -162,6 +162,3 @@ class BikeLock:
 
     def get_nfc_tag(self):
         return self.nfc_tag
-
-    def get_both(self):
-        return (self.nfc_tag, self.temp_tag)

@@ -185,11 +185,10 @@ class BikeRack:
         elif command == "check_state":
             name = payload.get("name")
             self._logger.debug(f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}")
-            self._logger.debug(f"Machine: {name}, is in state: {self.get_stm_by_name(name)._obj.get_both()}")
 
             self.mqtt_client.publish(
                 self.MQTT_TOPIC_OUTPUT,
-                f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}, with values: {self.get_stm_by_name(name)._obj.get_both()}"
+                f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}"
             )
 
         # Catch message witout handler
@@ -221,95 +220,6 @@ class BikeRack:
         self._logger.error(f"Error: did not find stm with name: {stm_name}")
         return None
 
-"""
-Declaring states and transitions
-"""
-
-RESERVATION_TIMER = 5000000
-
-# STATES
-initial = {
-    'name': 'initial'
-}
-available = {
-    'name': 'available',
-    'entry': 'green_led; unlock; available',
-}
-reserved = {
-    'name': 'reserved',
-    'entry': 'yellow_led',
-}
-locked = {
-    'name': 'locked',
-    'entry': 'red_led; lock'
-}
-out_of_order = {
-    'name': 'out_of_order',
-    'entry': 'red_led',
-}
-
-# TRANSITIONS
-t0 = {
-    'source': 'initial',
-    'target': 'available'
-}
-# From Available
-t1 = {
-    'source': 'available',
-    'target': 'reserved',
-    'trigger': 'reserve',
-    'effect': f'start_timer("t", {RESERVATION_TIMER});store(*)'  # TODO res_time
-}
-t2 = {
-    'source': 'available',
-    'target': 'locked',
-    'trigger': 'nfc_det',  # TODO
-
-}
-t3 = {
-    'source': 'available',
-    'target': 'out_of_order',
-    'trigger': 'fault',
-    'effect': 'broken'
-}
-# From Reserved
-t4 = {
-    'source': 'reserved',
-    'trigger': 'nfc_det',
-    'function': 'stm.check_nfc_t4(*)'
-}
-t5 = {
-    'source': 'reserved',
-    'target': 'available',
-    'trigger': 't',
-}
-t6 = {
-    'source': 'reserved',
-    'target': 'out_of_order',
-    'trigger': 'fault',
-    'effect': 'broken'
-}
-# From Locked
-t7 = {
-    'source': 'locked',
-    'trigger': 'nfc_det',  # TODO
-    'function': 'stm.check_nfc_t7(*)'
-}
-t8 = {
-    'source': 'locked',
-    'target': 'out_of_order',
-    'trigger': 'fault',
-    'effect': 'broken'
-}
-"""
-# TODO
-# From out of order
-t9 = {
-    'source': 'out_of_order',
-    # 'target': '?',
-    'effect': 'terminate'
-}
-"""
 
 # TODO TESTING
 rack = BikeRack("rack", "127.0.0.1", 1883)
