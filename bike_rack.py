@@ -96,15 +96,9 @@ class BikeRack:
 
         lock_name = "en"
         self._logger.debug(f'Create machine with name: {lock_name}')
-        lock = BikeLock(self.driver, self)
-        stm_lock = Machine(
-            name=lock_name,
-            states=[initial, reserved, locked, available, out_of_order],
-            transitions=[t0, t1, t2, t3, t4, t5, t6, t7, t8],
-            obj=lock
-        )
-        lock.stm = stm_lock
-        self.driver.add_machine(stm_lock)
+        lock_stm = BikeLock(self.driver, self)
+
+        self.driver.add_machine(lock_stm.stm)
         self.active_machines[lock_name] = lock_name
 
         self._logger.debug("Start driver")
@@ -191,9 +185,11 @@ class BikeRack:
         elif command == "check_state":
             name = payload.get("name")
             self._logger.debug(f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}")
+            self._logger.debug(f"Machine: {name}, is in state: {self.get_stm_by_name(name)._obj.get_both()}")
+
             self.mqtt_client.publish(
                 self.MQTT_TOPIC_OUTPUT,
-                f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}"
+                f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}, with values: {self.get_stm_by_name(name)._obj.get_both()}"
             )
 
         # Catch message witout handler
@@ -262,7 +258,7 @@ t1 = {
     'source': 'available',
     'target': 'reserved',
     'trigger': 'reserve',
-    'effect': f'start_timer("t", {RESERVATION_TIMER});'  # TODO res_time
+    'effect': f'start_timer("t", {RESERVATION_TIMER});store(*)'  # TODO res_time
 }
 t2 = {
     'source': 'available',
