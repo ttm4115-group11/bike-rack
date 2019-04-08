@@ -41,12 +41,12 @@ class BikeLock:
             'source': 'available',
             'target': 'reserved',
             'trigger': 'reserve',
-            'effect': f'start_timer("t", {self.RESERVATION_TIMER});store(*)'  # TODO res_time
+            'effect': f'start_timer("t", {self.RESERVATION_TIMER});store(*)'
         }
         t2 = {
             'source': 'available',
             'target': 'locked',
-            'trigger': 'nfc_det',  # TODO
+            'trigger': 'nfc_det',
             'effect': 'store(*)'
 
         }
@@ -76,7 +76,7 @@ class BikeLock:
         # From Locked
         t7 = {
             'source': 'locked',
-            'trigger': 'nfc_det',  # TODO
+            'trigger': 'nfc_det',
             'function': self.check_nfc_t7
         }
         t8 = {
@@ -92,7 +92,7 @@ class BikeLock:
             obj=self
         )
 
-    def store(self, *args, **kwargs):  # TODO
+    def store(self, *args, **kwargs):
         self.nfc_tag = kwargs["nfc_tag"]
 
     def check_nfc_t4(self, *args, **kwargs):

@@ -90,10 +90,7 @@ class BikeRack:
         self.active_machines = {}
         self.name = name
 
-        # TEST START!
-        # TODO Remove this section.
-        # This section is just to test with one lock.
-
+        # Add test_lock
         lock_name = "en"
         self._logger.debug(f'Create machine with name: {lock_name}')
         lock_stm = BikeLock(self.driver, self, lock_name)
@@ -181,15 +178,9 @@ class BikeRack:
                 f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}"
             )
 
-        # Catch message witout handler
+        # Catch message without handler
         else:
             self._logger.debug(f"Command: {command} does not have a handler")
-
-        #except Exception as err:
-        #    self._logger.error(
-        #        f'Det skjedde en feil: {err}. Ignorerer melding'
-        #        # f'Message sent to topic {msg.topic} had no valid JSON. Msg ignored. {err}'
-        #    )
 
     def res_expired(self, nfc_tag):
         self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Reservetion timed out for {nfc_tag}')
@@ -210,6 +201,4 @@ class BikeRack:
         self._logger.error(f"Error: did not find stm with name: {stm_name}")
         return None
 
-
-# TODO TESTING
 rack = BikeRack("rack", "127.0.0.1", 1883)
