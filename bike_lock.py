@@ -115,9 +115,6 @@ class BikeLock:
         # Backend should deal with an out of order signal differently if it is a bicycle already locked or not
         self.driver.send_broken_signal(self.nfc_tag, from_state)
 
-    def find_res_time(self):
-        return 20000  # TODO How to implement estimated arrival time? Add a variable
-
     def green_led(self):
         self.led("green")
         return
@@ -148,18 +145,6 @@ class BikeLock:
         if self.nfc_tag != 0:
             self.rack.res_expired(self.nfc_tag)
         self.nfc_tag = 0
-
-    # TODO Implement nfc_detected
-    def is_correct_nfc(self, nfc_tag):
-        # If a lock is not reserved and NFC should be valid
-        if self.nfc_tag == 0:
-            return True
-        elif nfc_tag == self.nfc_tag:
-            return True
-        return False
-
-    def test(self):
-        return "Hello!"
 
     def get_nfc_tag(self):
         return self.nfc_tag
