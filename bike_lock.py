@@ -10,7 +10,6 @@ class BikeLock:
         self.rack = rack
         self.name = name
 
-        self.temp_tag = 0
         initial = {
             'name': 'initial'
         }
@@ -118,24 +117,13 @@ class BikeLock:
         self.driver.send_broken_signal(self.nfc_tag, from_state)
 
     def green_led(self):
-        self.led("green")
-        return
+        self.gpio.green()
 
     def red_led(self):
-        self.led("red")
-        return
+        self.gpio.red()
 
     def yellow_led(self):
-        self.led("yellow")
-        return
-
-    def led(self, color):
-        if color == "red":
-            self.gpio.red()
-        if color == "green":
-            self.gpio.green()
-        if color == "yellow":
-            self.gpio.green()
+        self.gpio.yellow()
 
     def lock(self):
         self.gpio.lock()
