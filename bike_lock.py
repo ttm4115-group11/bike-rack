@@ -1,5 +1,5 @@
 from stmpy import Machine
-from LED import  green, yellow, red
+from LED import green, yellow, red
 
 class BikeLock:
     RESERVATION_TIMER = 5000000
