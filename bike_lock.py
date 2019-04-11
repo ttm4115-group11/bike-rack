@@ -1,5 +1,5 @@
 from stmpy import Machine
-from LED import green, yellow, red
+from LED import gpio
 
 class BikeLock:
     RESERVATION_TIMER = 5000000
@@ -92,6 +92,8 @@ class BikeLock:
             obj=self
         )
 
+        self.gpio = gpio()
+
     def store(self, *args, **kwargs):
         self.nfc_tag = kwargs["nfc_tag"]
 
@@ -129,17 +131,17 @@ class BikeLock:
 
     def led(self, color):
         if color == "red":
-            red()
+            self.gpio.red()
         if color == "green":
-            green()
+            self.gpio.green()
         if color == "yellow":
-            yellow()
+            self.gpio.green()
 
     def lock(self):
-        return  # TODO
+        self.gpio.lock()
 
     def unlock(self):
-        return  # TODO
+        self.gpio.unlock()
 
     def available(self):
         if self.nfc_tag != 0:
