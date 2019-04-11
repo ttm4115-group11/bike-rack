@@ -90,13 +90,10 @@ class BikeRack:
         self.active_machines = {}
         self.name = name
 
-        # TEST START!
-        # TODO Remove this section.
-        # This section is just to test with one lock.
-
+        # Add test_lock
         lock_name = "en"
         self._logger.debug(f'Create machine with name: {lock_name}')
-        lock_stm = BikeLock(self.driver, self)
+        lock_stm = BikeLock(self.driver, self, lock_name)
 
         self.driver.add_machine(lock_stm.stm)
         self.active_machines[lock_name] = lock_name
@@ -141,13 +138,10 @@ class BikeRack:
         command = payload.get('command')
         self._logger.debug(f"Have detected this command: {command}")
 
-        if command == "check_available":
-            self._logger.debug("Inside if statement: Check_av")  # TODO Remove
+        if command == "check_driver":
+            self._logger.debug(f"State Machine: {self.driver.print_status()}")
             if self.check_available():
-                self.mqtt_client.publish(
-                    self.MQTT_TOPIC_OUTPUT,
-                    f'Lock available'
-                )
+                self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, self.driver.print_status())
 
         # Assumes ``lock_name`` and ``nfc_tag``
         elif command == "reserve":
@@ -165,16 +159,9 @@ class BikeRack:
 
         elif command == "add_lock":
             lock_name = payload.get("lock_name")
-            lock = BikeLock(self.driver, self)
             self._logger.debug(f"Add lock with name: {lock_name}")
-            stm_lock = Machine(
-                name=lock_name,
-                states=[initial, reserved, locked, available, out_of_order],
-                transitions=[t0, t1, t2, t3, t4, t5, t6, t7, t8],
-                obj=lock
-            )
-            lock.stm = stm_lock
-            self.driver.add_machine(stm_lock)
+            lock_stm = BikeLock(self.driver, self, lock_name)
+            self.driver.add_machine(lock_stm.stm)
             self.active_machines[lock_name] = lock_name
 
         # Assumes payload with``nfc_tag`` and ``lock_name``
@@ -185,22 +172,15 @@ class BikeRack:
         elif command == "check_state":
             name = payload.get("name")
             self._logger.debug(f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}")
-            self._logger.debug(f"Machine: {name}, is in state: {self.get_stm_by_name(name)._obj.get_both()}")
 
             self.mqtt_client.publish(
                 self.MQTT_TOPIC_OUTPUT,
-                f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}, with values: {self.get_stm_by_name(name)._obj.get_both()}"
+                f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}"
             )
 
-        # Catch message witout handler
+        # Catch message without handler
         else:
             self._logger.debug(f"Command: {command} does not have a handler")
-
-        #except Exception as err:
-        #    self._logger.error(
-        #        f'Det skjedde en feil: {err}. Ignorerer melding'
-        #        # f'Message sent to topic {msg.topic} had no valid JSON. Msg ignored. {err}'
-        #    )
 
     def res_expired(self, nfc_tag):
         self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, f'Reservetion timed out for {nfc_tag}')
@@ -221,95 +201,4 @@ class BikeRack:
         self._logger.error(f"Error: did not find stm with name: {stm_name}")
         return None
 
-"""
-Declaring states and transitions
-"""
-
-RESERVATION_TIMER = 5000000
-
-# STATES
-initial = {
-    'name': 'initial'
-}
-available = {
-    'name': 'available',
-    'entry': 'green_led; unlock; available',
-}
-reserved = {
-    'name': 'reserved',
-    'entry': 'yellow_led',
-}
-locked = {
-    'name': 'locked',
-    'entry': 'red_led; lock'
-}
-out_of_order = {
-    'name': 'out_of_order',
-    'entry': 'red_led',
-}
-
-# TRANSITIONS
-t0 = {
-    'source': 'initial',
-    'target': 'available'
-}
-# From Available
-t1 = {
-    'source': 'available',
-    'target': 'reserved',
-    'trigger': 'reserve',
-    'effect': f'start_timer("t", {RESERVATION_TIMER});store(*)'  # TODO res_time
-}
-t2 = {
-    'source': 'available',
-    'target': 'locked',
-    'trigger': 'nfc_det',  # TODO
-
-}
-t3 = {
-    'source': 'available',
-    'target': 'out_of_order',
-    'trigger': 'fault',
-    'effect': 'broken'
-}
-# From Reserved
-t4 = {
-    'source': 'reserved',
-    'trigger': 'nfc_det',
-    'function': 'stm.check_nfc_t4(*)'
-}
-t5 = {
-    'source': 'reserved',
-    'target': 'available',
-    'trigger': 't',
-}
-t6 = {
-    'source': 'reserved',
-    'target': 'out_of_order',
-    'trigger': 'fault',
-    'effect': 'broken'
-}
-# From Locked
-t7 = {
-    'source': 'locked',
-    'trigger': 'nfc_det',  # TODO
-    'function': 'stm.check_nfc_t7(*)'
-}
-t8 = {
-    'source': 'locked',
-    'target': 'out_of_order',
-    'trigger': 'fault',
-    'effect': 'broken'
-}
-"""
-# TODO
-# From out of order
-t9 = {
-    'source': 'out_of_order',
-    # 'target': '?',
-    'effect': 'terminate'
-}
-"""
-
-# TODO TESTING
 rack = BikeRack("rack", "127.0.0.1", 1883)

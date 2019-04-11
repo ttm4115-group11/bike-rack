@@ -4,10 +4,11 @@ from stmpy import Machine
 class BikeLock:
     RESERVATION_TIMER = 5000000
 
-    def __init__(self, driver, rack):
+    def __init__(self, driver, rack, name):
         self.nfc_tag = 0
         self.driver = driver
         self.rack = rack
+        self.name = name
 
         self.temp_tag = 0
         initial = {
@@ -40,12 +41,12 @@ class BikeLock:
             'source': 'available',
             'target': 'reserved',
             'trigger': 'reserve',
-            'effect': f'start_timer("t", {self.RESERVATION_TIMER});store(*)'  # TODO res_time
+            'effect': f'start_timer("t", {self.RESERVATION_TIMER});store(*)'
         }
         t2 = {
             'source': 'available',
             'target': 'locked',
-            'trigger': 'nfc_det',  # TODO
+            'trigger': 'nfc_det',
             'effect': 'store(*)'
 
         }
@@ -75,7 +76,7 @@ class BikeLock:
         # From Locked
         t7 = {
             'source': 'locked',
-            'trigger': 'nfc_det',  # TODO
+            'trigger': 'nfc_det',
             'function': self.check_nfc_t7
         }
         t8 = {
@@ -85,13 +86,13 @@ class BikeLock:
             'effect': 'broken'
         }
         self.stm = Machine(
-            name="en",
+            name=self.name,
             states=[initial, reserved, locked, available, out_of_order],
             transitions=[t0, t1, t2, t3, t4, t5, t6, t7, t8],
             obj=self
         )
 
-    def store(self, *args, **kwargs):  # TODO
+    def store(self, *args, **kwargs):
         self.nfc_tag = kwargs["nfc_tag"]
 
     def check_nfc_t4(self, *args, **kwargs):
@@ -113,9 +114,6 @@ class BikeLock:
         # TODO How to track what state we came from?
         # Backend should deal with an out of order signal differently if it is a bicycle already locked or not
         self.driver.send_broken_signal(self.nfc_tag, from_state)
-
-    def find_res_time(self):
-        return 20000  # TODO How to implement estimated arrival time? Add a variable
 
     def green_led(self):
         self.led("green")
@@ -148,20 +146,5 @@ class BikeLock:
             self.rack.res_expired(self.nfc_tag)
         self.nfc_tag = 0
 
-    # TODO Implement nfc_detected
-    def is_correct_nfc(self, nfc_tag):
-        # If a lock is not reserved and NFC should be valid
-        if self.nfc_tag == 0:
-            return True
-        elif nfc_tag == self.nfc_tag:
-            return True
-        return False
-
-    def test(self):
-        return "Hello!"
-
     def get_nfc_tag(self):
         return self.nfc_tag
-
-    def get_both(self):
-        return (self.nfc_tag, self.temp_tag)
