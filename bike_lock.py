@@ -139,6 +139,7 @@ class BikeLock:
         return  # TODO
 
     def unlock(self):
+        self.nfc_tag=0
         return  # TODO
 
     def res_expired(self):
