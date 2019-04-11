@@ -29,7 +29,26 @@ def yellow():
     GPIO.output(16,GPIO.HIGH)
     time.sleep(3)
     print("LED off")
-    GPIO.output(16,GPIO.LOW)
+    GPIO.output(16, GPIO.LOW)
+
+
+# GPIO 19
+def lock():
+    GPIO.setup(19, GPIO.OUT)
+    GPIO.output(19, GPIO.HIGH)
+    print("LOCK")
+    time.sleep(0.5)
+    GPIO.output(19, GPIO.LOW)
+
+
+# GPIO 26
+def unlock():
+    GPIO.setup(26, GPIO.OUT)
+    GPIO.output(26, GPIO.HIGH)
+    print("UNLOCK")
+    time.sleep(0.5)
+    GPIO.output(26, GPIO.LOW)
+
 
 red()
 yellow()
