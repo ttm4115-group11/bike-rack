@@ -10,7 +10,6 @@ class BikeLock:
         self.rack = rack
         self.name = name
 
-        self.temp_tag = 0
         initial = {
             'name': 'initial'
         }
