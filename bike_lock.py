@@ -116,24 +116,16 @@ class BikeLock:
         self.driver.send_broken_signal(self.nfc_tag, from_state)
 
     def green_led(self):
-        self.led("green")
+        green()
         return
 
     def red_led(self):
-        self.led("red")
+        red()
         return
 
     def yellow_led(self):
-        self.led("yellow")
+        yellow()
         return
-
-    def led(self, color):
-        if color == "red":
-            red()
-        if color == "green":
-            green()
-        if color == "yellow":
-            yellow()
 
     def lock(self):
         return  # TODO
