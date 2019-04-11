@@ -1,5 +1,5 @@
 from stmpy import Machine
-
+from LED import  green, yellow, red
 
 class BikeLock:
     RESERVATION_TIMER = 5000000
@@ -127,13 +127,13 @@ class BikeLock:
         self.led("yellow")
         return
 
-    def led(self, color):  # TODO How to implement variables in effects? Or just have three methods: red_led(), green_led()...
+    def led(self, color):
         if color == "red":
-            return  # TODO
+            red()
         if color == "green":
-            return  # TODO
+            green()
         if color == "yellow":
-            return  # TODO
+            yellow()
 
     def lock(self):
         return  # TODO
