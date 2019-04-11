@@ -16,7 +16,7 @@ class BikeLock:
         }
         available = {
             'name': 'available',
-            'entry': 'green_led; unlock; available',
+            'entry': 'green_led; unlock',
         }
         reserved = {
             'name': 'reserved',
@@ -66,6 +66,7 @@ class BikeLock:
             'source': 'reserved',
             'target': 'available',
             'trigger': 't',
+            'effect': 'res_expired'
         }
         t6 = {
             'source': 'reserved',
