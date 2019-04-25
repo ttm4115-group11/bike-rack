@@ -188,12 +188,7 @@ class BikeRack:
         self._logger.debug(f"Detected NFC-tag with value: {nfc_tag} presented to lock: {lock_name}")
         self._logger.debug(self.get_stm_by_name(lock_name).state)
         kwargs = {"nfc_tag": nfc_tag}
-        # TODO This check should not be done here.
-        # Maybe we should make it possible for the locks to get nfc_det anytime?
-        if self.get_stm_by_name(lock_name).state == "available":
-            self.driver.send(message_id='nfc_det', stm_id=lock_name, kwargs=kwargs)
-        else:
-            self._logger.debug("This lock is not available")
+        self.driver.send(message_id='nfc_det', stm_id=lock_name, kwargs=kwargs)
 
     # Getter for stm_by name
     def get_stm_by_name(self, stm_name):
