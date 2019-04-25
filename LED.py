@@ -55,5 +55,5 @@ class gpio:
     def unlock(self):
         GPIO.output(self.UNLOCK_PIN, GPIO.HIGH)
         print("UNLOCK")
-        time.sleep(self.LOCK_PIN) # TODO The right variable? Should it be duration?
+        time.sleep(self.LOCK_DURATION)
         GPIO.output(self.UNLOCK_PIN, GPIO.LOW)
