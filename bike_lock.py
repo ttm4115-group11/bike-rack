@@ -2,6 +2,7 @@ from stmpy import Machine
 from LED import gpio
 
 class BikeLock:
+    # TODO Implement reservation time based on location
     RESERVATION_TIMER = 5000000
 
     def __init__(self, driver, rack, name):
