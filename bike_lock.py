@@ -9,13 +9,19 @@ class BikeLock:
         self.driver = driver
         self.rack = rack
         self.name = name
+        self.gpio = gpio()
 
+        """
+        State machine definition
+        """
+
+        # STATES
         initial = {
             'name': 'initial'
         }
         available = {
             'name': 'available',
-            'entry': 'green_led; unlock',
+            'entry': 'green_led',
         }
         reserved = {
             'name': 'reserved',
@@ -47,7 +53,6 @@ class BikeLock:
             'target': 'locked',
             'trigger': 'nfc_det',
             'effect': 'store(*); lock'
-
         }
         t3 = {
             'source': 'available',
@@ -65,7 +70,7 @@ class BikeLock:
             'source': 'reserved',
             'target': 'available',
             'trigger': 't',
-            'effect': 'res_expired'
+            'effect': 'res_expired; clear_nfc'
         }
         t6 = {
             'source': 'reserved',
@@ -85,6 +90,7 @@ class BikeLock:
             'trigger': 'fault',
             'effect': 'broken'
         }
+
         self.stm = Machine(
             name=self.name,
             states=[initial, reserved, locked, available, out_of_order],
@@ -92,10 +98,11 @@ class BikeLock:
             obj=self
         )
 
-        self.gpio = gpio()
-
     def store(self, *args, **kwargs):
         self.nfc_tag = kwargs["nfc_tag"]
+
+    def clear_nfc():
+        self.nfc_tag=0
 
     def check_nfc_t4(self, *args, **kwargs):
         self.driver._logger.debug(f"check_nfc_t4: {kwargs}")
@@ -107,8 +114,11 @@ class BikeLock:
             return 'reserved'
 
     def check_nfc_t7(self, *args, **kwargs):
+        self.driver._logger.debug(f"check_nfc_t7: {kwargs}")
         nfc_tag = kwargs["nfc_tag"]
         if self.nfc_tag == nfc_tag:
+            unlock()
+            clear_nfc()
             return 'available'
         else:
             return 'locked'
@@ -132,11 +142,9 @@ class BikeLock:
 
     def unlock(self):
         self.gpio.unlock()
-        self.nfc_tag=0
 
     def res_expired(self):
         self.rack.res_expired(self.nfc_tag)
-        self.nfc_tag = 0
 
     def get_nfc_tag(self):
         return self.nfc_tag

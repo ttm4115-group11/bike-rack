@@ -143,7 +143,7 @@ class BikeRack:
             if self.check_available():
                 self.mqtt_client.publish(self.MQTT_TOPIC_OUTPUT, self.driver.print_status())
 
-        # Assumes ``lock_name`` and ``nfc_tag``
+        # Assumes payload with ``lock_name`` and ``nfc_tag``
         elif command == "reserve":
             for name in self.active_machines:
                 if self.driver._stms_by_id[name].state == "available":
@@ -172,7 +172,6 @@ class BikeRack:
         elif command == "check_state":
             name = payload.get("name")
             self._logger.debug(f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}")
-
             self.mqtt_client.publish(
                 self.MQTT_TOPIC_OUTPUT,
                 f"Machine: {name}, is in state: {self.get_stm_by_name(name).state}"
@@ -189,6 +188,8 @@ class BikeRack:
         self._logger.debug(f"Detected NFC-tag with value: {nfc_tag} presented to lock: {lock_name}")
         self._logger.debug(self.get_stm_by_name(lock_name).state)
         kwargs = {"nfc_tag": nfc_tag}
+        # TODO This check should not be done here.
+        # Maybe we should make it possible for the locks to get nfc_det anytime?
         if self.get_stm_by_name(lock_name).state == "available":
             self.driver.send(message_id='nfc_det', stm_id=lock_name, kwargs=kwargs)
         else:
@@ -199,7 +200,6 @@ class BikeRack:
         if self.driver._stms_by_id[stm_name]:
             self._logger.debug(f"Getting stm with name: {stm_name}")
             return self.driver._stms_by_id[stm_name]
-
         # Did not find machine with ``stm_name``
         self._logger.error(f"Error: did not find stm with name: {stm_name}")
         return None

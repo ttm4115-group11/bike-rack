@@ -1,3 +1,7 @@
+"""
+This file is uesed as a reference
+"""
+
 import paho.mqtt.client as mqtt
 import stmpy
 import logging
@@ -43,7 +47,7 @@ class TimerLogic:
             'source' : 'active',
             'target' : 'completed',
             'trigger': 't',
-            'effect' : 'timer_completed',  
+            'effect' : 'timer_completed',
         }
 
         self.stm = stmpy.Machine(name=name, transitions=[t0, t1, t2], obj=self)
@@ -64,11 +68,11 @@ class TimerLogic:
     def report_status(self):
         remaning_time = self.stm.get_timer('t')
         self._logger.debug(f'Remaning time of {self.name} is {remaning_time}')
-        self.component.mqtt_client.publish( 
+        self.component.mqtt_client.publish(
             MQTT_TOPIC_OUTPUT,
             f'Remaning time of {self.name} is {remaning_time}'
         )
-        
+
 
     def timer_completed(self):
         self._logger.debug(f'{self.name} is finished!')
@@ -129,7 +133,7 @@ class TimerManagerComponent:
                 f'Message sent to topic {msg.topic} had no valid JSON. Msg ignored. {err}'
             )
             return
-        
+
         command = payload.get('command')
 
         if command == 'new_timer':
@@ -151,7 +155,7 @@ class TimerManagerComponent:
             self._logger.debug(f'publish status for {singe_timer_name}')
             self.stm_driver.send('report', payload.get('name'))
 
-        else: 
+        else:
             self._logger.error(f'{command} is unknown command')
 
 
