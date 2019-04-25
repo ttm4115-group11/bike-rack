@@ -23,7 +23,7 @@ class BikeLock:
         }
         locked = {
             'name': 'locked',
-            'entry': 'red_led; lock'
+            'entry': 'red_led'
         }
         out_of_order = {
             'name': 'out_of_order',
@@ -46,7 +46,7 @@ class BikeLock:
             'source': 'available',
             'target': 'locked',
             'trigger': 'nfc_det',
-            'effect': 'store(*)'
+            'effect': 'store(*); lock'
 
         }
         t3 = {
@@ -100,6 +100,7 @@ class BikeLock:
         self.driver._logger.debug(f"check_nfc_t4: {kwargs}")
         nfc_tag = kwargs["nfc_tag"]
         if self.nfc_tag == nfc_tag:
+            lock()
             return 'locked'
         else:
             return 'reserved'
