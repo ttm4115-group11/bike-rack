@@ -1,5 +1,5 @@
 from stmpy import Machine
-
+from LED import gpio
 
 class BikeLock:
     RESERVATION_TIMER = 5000000
@@ -10,7 +10,6 @@ class BikeLock:
         self.rack = rack
         self.name = name
 
-        self.temp_tag = 0
         initial = {
             'name': 'initial'
         }
@@ -24,7 +23,7 @@ class BikeLock:
         }
         locked = {
             'name': 'locked',
-            'entry': 'red_led; lock'
+            'entry': 'red_led'
         }
         out_of_order = {
             'name': 'out_of_order',
@@ -47,7 +46,7 @@ class BikeLock:
             'source': 'available',
             'target': 'locked',
             'trigger': 'nfc_det',
-            'effect': 'store(*)'
+            'effect': 'store(*); lock'
 
         }
         t3 = {
@@ -93,6 +92,8 @@ class BikeLock:
             obj=self
         )
 
+        self.gpio = gpio()
+
     def store(self, *args, **kwargs):
         self.nfc_tag = kwargs["nfc_tag"]
 
@@ -100,6 +101,7 @@ class BikeLock:
         self.driver._logger.debug(f"check_nfc_t4: {kwargs}")
         nfc_tag = kwargs["nfc_tag"]
         if self.nfc_tag == nfc_tag:
+            lock()
             return 'locked'
         else:
             return 'reserved'
@@ -117,31 +119,20 @@ class BikeLock:
         self.driver.send_broken_signal(self.nfc_tag, from_state)
 
     def green_led(self):
-        self.led("green")
-        return
+        self.gpio.green()
 
     def red_led(self):
-        self.led("red")
-        return
+        self.gpio.red()
 
     def yellow_led(self):
-        self.led("yellow")
-        return
-
-    def led(self, color):  # TODO How to implement variables in effects? Or just have three methods: red_led(), green_led()...
-        if color == "red":
-            return  # TODO
-        if color == "green":
-            return  # TODO
-        if color == "yellow":
-            return  # TODO
+        self.gpio.yellow()
 
     def lock(self):
-        return  # TODO
+        self.gpio.lock()
 
     def unlock(self):
+        self.gpio.unlock()
         self.nfc_tag=0
-        return  # TODO
 
     def res_expired(self):
         self.rack.res_expired(self.nfc_tag)

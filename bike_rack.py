@@ -189,7 +189,10 @@ class BikeRack:
         self._logger.debug(f"Detected NFC-tag with value: {nfc_tag} presented to lock: {lock_name}")
         self._logger.debug(self.get_stm_by_name(lock_name).state)
         kwargs = {"nfc_tag": nfc_tag}
-        self.driver.send(message_id='nfc_det', stm_id=lock_name, kwargs=kwargs)
+        if self.get_stm_by_name(lock_name).state == "available":
+            self.driver.send(message_id='nfc_det', stm_id=lock_name, kwargs=kwargs)
+        else:
+            self._logger.debug("This lock is not available")
 
     # Getter for stm_by name
     def get_stm_by_name(self, stm_name):
@@ -201,4 +204,5 @@ class BikeRack:
         self._logger.error(f"Error: did not find stm with name: {stm_name}")
         return None
 
-rack = BikeRack("rack", "127.0.0.1", 1883)
+
+rack = BikeRack("rack", "localhost", 1883)
