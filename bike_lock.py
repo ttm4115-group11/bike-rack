@@ -1,5 +1,5 @@
 from stmpy import Machine
-from LED import gpio
+from gpio_component import gpio
 
 class BikeLock:
     # TODO Implement reservation time based on location
