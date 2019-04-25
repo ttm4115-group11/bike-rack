@@ -1,6 +1,7 @@
 from stmpy import Machine
 from gpio_component import gpio
 
+
 class BikeLock:
     # TODO Implement reservation time based on location
     RESERVATION_TIMER = 5000000
@@ -102,14 +103,14 @@ class BikeLock:
     def store(self, *args, **kwargs):
         self.nfc_tag = kwargs["nfc_tag"]
 
-    def clear_nfc():
+    def clear_nfc(self):
         self.nfc_tag=0
 
     def check_nfc_t4(self, *args, **kwargs):
         self.driver._logger.debug(f"check_nfc_t4: {kwargs}")
         nfc_tag = kwargs["nfc_tag"]
         if self.nfc_tag == nfc_tag:
-            lock()
+            self.lock()
             return 'locked'
         else:
             return 'reserved'
@@ -118,8 +119,8 @@ class BikeLock:
         self.driver._logger.debug(f"check_nfc_t7: {kwargs}")
         nfc_tag = kwargs["nfc_tag"]
         if self.nfc_tag == nfc_tag:
-            unlock()
-            clear_nfc()
+            self.unlock()
+            self.clear_nfc()
             return 'available'
         else:
             return 'locked'
