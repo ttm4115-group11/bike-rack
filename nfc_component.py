@@ -1,9 +1,10 @@
 import nxppy
 import paho.mqtt.client as mqtt
 import json
+import time
 
-TOPIC = 'rack/1/lock/1'
-MQTT_BROKER = 'localhost'
+TOPIC = 'bike/'
+MQTT_BROKER = '10.24.23.140'
 MQTT_PORT = 1883
 
 """
@@ -44,8 +45,9 @@ while True:
         client.publish(
             TOPIC,
             json.dumps({
-                "command": "nfd_det",
+                "command": "nfc_det",
                 "value": uid,
+                "lock_name": "en",
             }).encode()
         )
     except nxppy.SelectError:

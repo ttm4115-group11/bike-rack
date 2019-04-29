@@ -13,7 +13,7 @@ class gpio:
     pins = [RED_PIN, GREEN_PIN, YELLOW_PIN, LOCK_PIN, UNLOCK_PIN]
 
     LED_DURATION = 3  # Seconds
-    LOCK_DURATION = 0.5  # Seconds
+    LOCK_DURATION = 0.2  # Seconds
 
     def __init__(self):
         GPIO.setmode(GPIO.BCM)
